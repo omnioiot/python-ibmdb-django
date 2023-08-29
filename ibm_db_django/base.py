@@ -1,7 +1,7 @@
 # +--------------------------------------------------------------------------+
 # |  Licensed Materials - Property of IBM                                    |
 # |                                                                          |
-# | (C) Copyright IBM Corporation 2009-2021.                                      |
+# | (C) Copyright IBM Corporation 2009-2021.                                 |
 # +--------------------------------------------------------------------------+
 # | This module complies with Django 1.0 and is                              |
 # | Licensed under the Apache License, Version 2.0 (the "License");          |
@@ -197,7 +197,7 @@ class DatabaseWrapper( BaseDatabaseWrapper ):
     pattern_esc = r"REPLACE(REPLACE(REPLACE({}, '\', '\\'), '%%', '\%%'), '_', '\_')"
     pattern_ops = {
         'contains': r"LIKE '%%' || {} || '%%' ESCAPE '\'",
-        'icontains': r"LIKE '%%' || UPPER({}) || '%%' ESCAPE '\'",
+        'icontains': r"LIKE CAST('%%' || UPPER({}) || '%%' AS VARCHAR(4000)) ESCAPE '\'",
         'startswith': r"LIKE {} || '%%' ESCAPE '\'",
         'istartswith': r"LIKE UPPER({}) || '%%' ESCAPE '\'",
         'endswith': r"LIKE '%%' || {} ESCAPE '\'",
