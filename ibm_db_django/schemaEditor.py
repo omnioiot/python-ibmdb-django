@@ -33,6 +33,8 @@ except ImportError:
     from django.db.backends.base.schema import BaseDatabaseSchemaEditor
 
 import six
+
+from django.conf import settings
 from django.db import models
 from django.db.backends.utils import truncate_name, split_identifier
 from django.db.models.fields.related import ManyToManyField
@@ -1113,3 +1115,21 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
 
     def _index_condition_sql(self, condition):
         return ''
+
+    def _get_index_tablespace_sql(self, model, fields, db_tablespace=None):
+        # This is needed to allow the tablespace on the CREATE TABLE statement
+        # But not on the CREATE INDEX ones
+        # By default DEFAULT_INDEX_TABLESPACE is "" (empty string) 
+        # Setting it explicitly to  None will avoid the SQLSTATE=42601 SQLCODE=-109 error
+        if settings.DEFAULT_INDEX_TABLESPACE is None:
+            return ""
+        if db_tablespace is None:
+            if len(fields) == 1 and fields[0].db_tablespace:
+                db_tablespace = fields[0].db_tablespace
+            elif settings.DEFAULT_INDEX_TABLESPACE:
+                db_tablespace = settings.DEFAULT_INDEX_TABLESPACE
+            elif model._meta.db_tablespace:
+                db_tablespace = model._meta.db_tablespace
+        if db_tablespace is not None:
+            return " " + self.connection.ops.tablespace_sql(db_tablespace)
+        return ""
