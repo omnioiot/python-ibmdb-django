@@ -74,6 +74,7 @@ def _related_non_m2m_objects(old_field, new_field):
 
 class DB2SchemaEditor(BaseDatabaseSchemaEditor):
     psudo_column_prefix = 'psudo_'
+    sql_create_table = "CREATE TABLE %(table)s (%(definition)s) ORGANIZE BY ROW"
     sql_delete_table = "DROP TABLE %(table)s"
     sql_rename_table = "RENAME TABLE %(old_table)s TO %(new_table)s"
     sql_create_column = "ALTER TABLE %(table)s ADD COLUMN %(column)s %(definition)s"
@@ -399,7 +400,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                 for constraint_name in constraint_names:
                     self.execute(self._delete_check_sql(model, constraint_name))
 
-            #Have only meta constraints to recreate later
+            # Have only meta constraints to recreate later
             with self.connection.cursor() as cur:
                 meta_constraints_check = self.connection.introspection.get_constraints(cur, model._meta.db_table)
                 for key, constraint in list(meta_constraints_check.items()):
@@ -417,7 +418,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
             new_db_params = new_field.db_parameters(connection=self.connection)
             new_type = new_db_params['type']
 
-            #Now change datatype of foreign key tables.
+            # Now change datatype of foreign key tables.
             for _old_rel, new_rel in related_non_m2m_objects:
                 sql = self.sql_alter_column_type % {
                     'column': self.quote_name(new_rel.remote_field.column),
@@ -432,7 +433,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
 
         # Have they renamed the column?
         if old_field.column != new_field.column:
-            #Need to change the field name
+            # Need to change the field name
 
             # Drop incoming FK constraints for non-primary key fields
             fk_constraints = self._is_referenced_by_fk_constraint(model._meta.db_table, old_field.column, ignore_self=True)
@@ -442,7 +443,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                         'table': self.quote_name(table),
                         'name': self.quote_name(constr_name)})
 
-            #Defer constraint check
+            # Defer constraint check
             with self.connection.cursor() as cur:
                 constraints_pre = self.connection.introspection.get_constraints(cur, model._meta.db_table)
                 self._defer_constraints_check(constraints_pre, deferred_constraints, old_field, new_field, model, defer_pk=True, defer_unique=True, defer_index=True, defer_check=True)
@@ -461,7 +462,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                 elif isinstance(sql, str):
                     self.deferred_sql[i] = sql.replace(old_field.column.upper(), new_field.column.upper())
 
-            #restore meta constraint checks which got deleted while renaming or altering column
+            # restore meta constraint checks which got deleted while renaming or altering column
             def _get_meta_constraint_check(model_meta_constraints, constraint_name):
                 for constraint in model_meta_constraints:
                     if constraint.name == constraint_name:
@@ -474,7 +475,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
             deferred_constraints = self.get_missing_constraints(model, constraints_pre, deferred_constraints)
             self._restore_constraints_check(deferred_constraints, old_field, new_field, model)
 
-            #ALTER TABLE "SCHEMA_BOOK" ADD CONSTRAINT "SCHEMA_BOOK_AUTHOR_ID_C80C8297_FK_SCHEMA_AUTHOR_NAME" FOREIGN KEY ("AUTHOR_ID") REFERENCES "SCHEMA_AUTHOR" ("NAME"); (params ())
+            # ALTER TABLE "SCHEMA_BOOK" ADD CONSTRAINT "SCHEMA_BOOK_AUTHOR_ID_C80C8297_FK_SCHEMA_AUTHOR_NAME" FOREIGN KEY ("AUTHOR_ID") REFERENCES "SCHEMA_AUTHOR" ("NAME"); (params ())
             for table, contraints in fk_constraints.items():
                 for constr_name, constraint in contraints.items():
                     suffix = '_fk_%(to_table)s_%(to_column)s'
@@ -712,7 +713,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                 rel_condition = False
         else:
             if field.remote_field is not None and hasattr(field.remote_field,'through'):
-                #rel_condition = field.remote_field.through._meta.auto_created
+                # rel_condition = field.remote_field.through._meta.auto_created
                 rel_condition = True
             else:
                 rel_condition = False
@@ -741,7 +742,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
             if p_key:
                 field.primary_key = True
                 cur = self.connection.cursor()
-                #remove other pk if available
+                # remove other pk if available
                 table = model._meta.db_table.replace('""', '\"') if model._meta.db_table.count("\"") > 0 else model._meta.db_table
                 other_pk = None
                 for other_pk in cur.connection.primary_keys( True, cur.connection.get_current_schema(), table):
@@ -764,7 +765,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                             }
                         )
 
-                    #Note: Need to check if we need to break from loop here after first execution.
+                    # Note: Need to check if we need to break from loop here after first execution.
                 sql = self.sql_create_pk % {'table': self.quote_name(model._meta.db_table), 'name': self.quote_name(self._create_index_name(model._meta.db_table, [field.column], suffix="_pk")), 'columns': self.quote_name(field.column)}
                 self.deferred_sql.append(sql)
             elif unique:
@@ -835,7 +836,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                 # TimeField are stored as TIMESTAMP with a 1900-01-01 date part.
                 new_value = "TO_TIMESTAMP(CONCAT('1900-01-01 ', %s), 'YYYY-MM-DD HH24:MI:SS.FF')" % new_value
 
-        #Transfer data from old field to new tmp field
+        # Transfer data from old field to new tmp field
         self.execute("UPDATE %s set %s=%s" % (
                 self.quote_name(model._meta.db_table),
                 self.quote_name(tmp_new_field.column),
@@ -877,7 +878,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
                 old_db_table.lower() == new_db_table.lower())):
             return
 
-        #Defer constraint check
+        # Defer constraint check
         with self.connection.cursor() as cur:
             constraints_pre = self.connection.introspection.get_constraints(cur, old_db_table)
         self._defer_constraints_check(constraints_pre, deferred_constraints, old_field, new_field, model, defer_pk=True, defer_unique=True, defer_index=True, defer_check=True, defer_fk=True, rename_table=old_db_table)
@@ -887,14 +888,14 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
             "new_table": self.quote_name(new_db_table),
         })
 
-        #restore constraint checks
+        # restore constraint checks
         deferred_constraints = self.get_missing_constraints(model, constraints_pre, deferred_constraints)
         self._restore_constraints_check(deferred_constraints, old_field, new_field, model, rename_table=new_db_table, old_table=old_db_table)
 
-        #Rebuild incoming FK constraints
+        # Rebuild incoming FK constraints
         for inc_rel in model._meta.related_objects:
             if not isinstance(inc_rel, ManyToManyRel):
-                #If self-referential ignore, already restored constraints above.
+                # If self-referential ignore, already restored constraints above.
                 if inc_rel.field.opts.db_table != new_db_table and old_db_table == inc_rel.field.related_model._meta.db_table:
                     self.execute(
                         self.sql_create_fk % {
@@ -1119,7 +1120,7 @@ class DB2SchemaEditor(BaseDatabaseSchemaEditor):
     def _get_index_tablespace_sql(self, model, fields, db_tablespace=None):
         # This is needed to allow the tablespace on the CREATE TABLE statement
         # But not on the CREATE INDEX ones
-        # By default DEFAULT_INDEX_TABLESPACE is "" (empty string) 
+        # By default DEFAULT_INDEX_TABLESPACE is "" (empty string)
         # Setting it explicitly to  None will avoid the SQLSTATE=42601 SQLCODE=-109 error
         if settings.DEFAULT_INDEX_TABLESPACE is None:
             return ""
